@@ -142,9 +142,10 @@ const options: swaggerJsdoc.Options = {
         },
     },
 
-    // ตอน dev: อ่านจาก src/*.ts (มี ts-node-dev)
-    // ตอน production: อ่านจาก dist/*.js (compile แล้ว, JSDoc ยังอยู่เพราะ removeComments=false)
-    apis: process.env.NODE_ENV === 'production'
+    // detect runtime: ถ้าเรารันจาก .js แสดงว่าเป็น compiled build (production / staging / dev บน Render)
+    // ถ้ารันจาก .ts แสดงว่าเป็น ts-node-dev (local dev)
+    // วิธีนี้ robust กว่าการเช็ค NODE_ENV เพราะ NODE_ENV อาจเป็น staging / development ที่ Render
+    apis: __filename.endsWith('.js')
         ? ['./dist/routes/*.js', './dist/controllers/*.js']
         : ['./src/routes/*.ts', './src/controllers/*.ts'],
 };
