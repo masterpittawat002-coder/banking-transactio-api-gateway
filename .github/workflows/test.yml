@@ -1,0 +1,86 @@
+name: Test
+
+# trigger: เมื่อมี push เข้า main หรือ PR ที่ target main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # services ที่ test ต้องใช้ — postgres + redis เปิดให้พร้อม
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: banking_gateway_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Run unit tests
+      - name: Run unit tests
+        run: npm run test:unit
+
+      # 5. Run database migration บน test DB
+      - name: Run migrations
+        run: |
+          for f in database/migrations/*.sql; do
+            PGPASSWORD=postgres psql -h localhost -U postgres -d banking_gateway_test -f "$f"
+          done
+
+      # 6. Run integration tests
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: banking_gateway_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          REDIS_PASSWORD: ''
+          JWT_SECRET: test-secret-for-ci-only
+          JWT_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+
+      # 7. Build TypeScript (เช็คว่า compile ได้)
+      - name: Build
+        run: npm run build

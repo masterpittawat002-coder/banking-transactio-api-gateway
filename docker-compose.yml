@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      # bind เฉพาะ 127.0.0.1 → คนอื่นในเครือข่ายเข้า postgres ตรงๆ ไม่ได้
+      # มีแต่ container ภายใน + npm run dev บนเครื่องเอง
+      - "127.0.0.1:${DB_PORT}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - banking-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      # bind เฉพาะ 127.0.0.1 → คนอื่นในเครือข่ายเข้า redis ตรงๆ ไม่ได้
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - banking-network
+
+  # ============================================
+  # Migration — run แล้วจบ ไม่ค้างเป็น service
+  # ============================================
+  migration:
+    image: postgres:15-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SEED: ${DB_SEED:-false}
+    volumes:
+      - ./database/migrations:/migrations
+      - ./database/seeds:/seeds
+      - ./database/run-migrations.sh:/run-migrations.sh
+    entrypoint: ["sh", "/run-migrations.sh"]
+    networks:
+      - banking-network
+
+  # ============================================
+  # App — Node.js production
+  # ============================================
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - banking-network
+
+volumes:
+  pgdata:
+
+networks:
+  banking-network:
+    driver: bridge

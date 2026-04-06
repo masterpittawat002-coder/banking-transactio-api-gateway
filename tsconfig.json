@@ -1,0 +1,53 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "commonjs",
+        "outDir": "./dist",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "baseUrl": "./src",
+        "types": [
+            "node",
+            "jest"
+        ],
+        "paths": {
+            "@/*": [
+                "*"
+            ],
+            "@config/*": [
+                "config/*"
+            ],
+            "@services/*": [
+                "services/*"
+            ],
+            "@controllers/*": [
+                "controllers/*"
+            ],
+            "@middlewares/*": [
+                "middlewares/*"
+            ],
+            "@repositories/*": [
+                "repositories/*"
+            ],
+            "@utils/*": [
+                "utils/*"
+            ],
+            "@validators/*": [
+                "validators/*"
+            ],
+            "@types/*": [
+                "types/*"
+            ]
+        }
+    },
+    "include": [
+        "src/**/*",
+        "tests/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
