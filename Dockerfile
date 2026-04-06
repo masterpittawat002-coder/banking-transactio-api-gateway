@@ -35,6 +35,11 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 COPY register-paths.js ./
 
+# Copy migrations + migrate script — ต้องมีใน image เพราะ Render Free plan
+# ไม่รองรับ Pre-Deploy Command ต้อง run migrate ตอน container start
+COPY database/migrations ./database/migrations
+COPY scripts/migrate.js ./scripts/migrate.js
+
 # สร้าง logs directory
 RUN mkdir -p logs && chown -R appuser:appgroup logs
 
@@ -48,5 +53,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
-# Start -- ใช้ -r register-paths.js เพื่อให้ @/ alias ทำงานใน production
-CMD ["node", "-r", "./register-paths.js", "dist/app.js"]
+# Start -- run migrations ก่อน แล้วค่อย start app
+# ใช้ -r register-paths.js เพื่อให้ @/ alias ทำงานใน production
+CMD ["sh", "-c", "node scripts/migrate.js && node -r ./register-paths.js dist/app.js"]

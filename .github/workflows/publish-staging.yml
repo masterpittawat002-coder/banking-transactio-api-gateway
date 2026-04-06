@@ -1,0 +1,20 @@
+name: CD - Publish Staging
+
+# staging ยังไม่มี target deploy — ตอนนี้รัน test อย่างเดียวก่อน
+# เมื่อมี target แล้ว ให้เพิ่ม deploy job ต่อท้าย `test`
+on:
+  push:
+    branches: [publish-staging]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/reusable-test.yml
+
+  # deploy:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   environment: staging
+  #   steps:
+  #     - name: TODO - deploy to staging target
+  #       run: echo "staging target ยังไม่กำหนด"
