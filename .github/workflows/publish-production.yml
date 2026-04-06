@@ -1,0 +1,20 @@
+name: CD - Publish Production
+
+# production ยังไม่มี target deploy — ตอนนี้รัน test อย่างเดียวก่อน
+# เมื่อมี target แล้ว ให้เพิ่ม deploy job ต่อท้าย `test` แบบเดียวกับ publish-staging / publish-development
+on:
+  push:
+    branches: [publish-production]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/reusable-test.yml
+
+  # deploy:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   steps:
+  #     - name: TODO - deploy to production target
+  #       run: echo "production target ยังไม่กำหนด"

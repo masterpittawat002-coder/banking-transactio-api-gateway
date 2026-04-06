@@ -1,0 +1,10 @@
+name: CI - Production
+
+# รัน test เมื่อมี PR target เข้า branch `production`
+on:
+  pull_request:
+    branches: [production]
+
+jobs:
+  test:
+    uses: ./.github/workflows/reusable-test.yml

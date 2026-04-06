@@ -1,17 +1,13 @@
-name: Test
+name: Reusable Test
 
-# trigger: เมื่อมี push เข้า main หรือ PR ที่ target main
+# reusable workflow — ถูกเรียกจาก workflow อื่นผ่าน `uses:`
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_call:
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
-    # services ที่ test ต้องใช้ — postgres + redis เปิดให้พร้อม
     services:
       postgres:
         image: postgres:15-alpine
@@ -38,33 +34,30 @@ jobs:
           --health-retries 5
 
     steps:
-      # 1. Checkout code
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # 3. Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4. Run unit tests
+      - name: Lint
+        run: npm run lint
+
       - name: Run unit tests
         run: npm run test:unit
 
-      # 5. Run database migration บน test DB
       - name: Run migrations
         run: |
           for f in database/migrations/*.sql; do
             PGPASSWORD=postgres psql -h localhost -U postgres -d banking_gateway_test -f "$f"
           done
 
-      # 6. Run integration tests
       - name: Run integration tests
         run: npm run test:integration
         env:
@@ -81,6 +74,5 @@ jobs:
           JWT_EXPIRES_IN: 15m
           JWT_REFRESH_EXPIRES_IN: 7d
 
-      # 7. Build TypeScript (เช็คว่า compile ได้)
       - name: Build
         run: npm run build

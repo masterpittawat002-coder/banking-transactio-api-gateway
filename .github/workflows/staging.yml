@@ -1,0 +1,10 @@
+name: CI - Staging
+
+# รัน test เมื่อมี PR target เข้า branch `staging`
+on:
+  pull_request:
+    branches: [staging]
+
+jobs:
+  test:
+    uses: ./.github/workflows/reusable-test.yml
